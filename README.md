@@ -39,6 +39,10 @@ npm run seed
 - `POST /api/emails/send`
 - `POST /api/emails/send-bulk`
 
+### API key auth
+- All mutation routes (`POST`, `PUT`, `PATCH`, `DELETE`) require the `x-api-key` header.
+- Set the API key in `.env` as `API_KEY`.
+
 ### Single send payload examples
 
 Using direct HTML:
