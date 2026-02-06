@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
+const apiKeyAuth = require('./middleware/apiKeyAuth');
 const templateRoutes = require('./routes/templateRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 
@@ -14,6 +15,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(apiKeyAuth);
 
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
