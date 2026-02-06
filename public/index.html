@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Server API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f6f8fb;
+      color: #1f2937;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 820px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    code {
+      background: #eef2ff;
+      padding: 0.15rem 0.4rem;
+      border-radius: 6px;
+    }
+    ul {
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📧 Email Server API</h1>
+    <p>Welcome! Your Express + MongoDB email server is running successfully.</p>
+
+    <h3>Available Endpoints</h3>
+    <ul>
+      <li><code>GET /health</code> - Health check</li>
+      <li><code>POST /api/templates</code> - Create template</li>
+      <li><code>GET /api/templates</code> - List templates</li>
+      <li><code>GET /api/templates/:id</code> - Get template by ID</li>
+      <li><code>PUT /api/templates/:id</code> - Update template</li>
+      <li><code>DELETE /api/templates/:id</code> - Delete template</li>
+      <li><code>POST /api/emails/send</code> - Send single email</li>
+      <li><code>POST /api/emails/send-bulk</code> - Send bulk emails</li>
+    </ul>
+
+    <p>Use a template body format like <code>{{name}}</code> and pass variables in API payload.</p>
+  </div>
+</body>
+</html>
