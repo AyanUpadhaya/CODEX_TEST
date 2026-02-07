@@ -1,5 +1,9 @@
+const crypto = require('crypto');
 const { User, ROLES } = require('../models/User');
 const { signToken } = require('../utils/jwt');
+const { sendEmail } = require('../services/emailService');
+
+const RESET_PASSWORD_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const buildToken = (user) => {
   const secret = process.env.JWT_SECRET;
@@ -19,6 +23,16 @@ const buildToken = (user) => {
     secret,
     { expiresIn }
   );
+};
+
+const buildResetPasswordUrl = (req, token) => {
+  const configuredBaseUrl = process.env.RESET_PASSWORD_URL_BASE || process.env.CLIENT_URL;
+
+  if (configuredBaseUrl) {
+    return `${configuredBaseUrl.replace(/\/$/, '')}/reset-password/${token}`;
+  }
+
+  return `${req.protocol}://${req.get('host')}/api/auth/reset-password/${token}`;
 };
 
 const register = async (req, res) => {
@@ -86,6 +100,81 @@ const login = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'email is required.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+resetPasswordToken +resetPasswordExpiresAt');
+
+    if (!user) {
+      return res.status(200).json({
+        message: 'If the email exists, a reset link has been sent.'
+      });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpiresAt = new Date(Date.now() + RESET_PASSWORD_EXPIRY_MS);
+    await user.save();
+
+    const resetPasswordUrl = buildResetPasswordUrl(req, rawToken);
+
+    await sendEmail({
+      to: user.email,
+      subject: 'Reset your password',
+      html: `
+        <p>Hello ${user.name},</p>
+        <p>You requested a password reset. Click the link below to reset your password:</p>
+        <p><a href="${resetPasswordUrl}">${resetPasswordUrl}</a></p>
+        <p>This link expires in 24 hours.</p>
+      `
+    });
+
+    return res.status(200).json({
+      message: 'If the email exists, a reset link has been sent.'
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to process forgot password request.', error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: 'token and password are required.' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpiresAt: { $gt: new Date() }
+    }).select('+resetPasswordToken +resetPasswordExpiresAt');
+
+    if (!user) {
+      return res.status(400).json({ message: 'Reset token is invalid or has expired.' });
+    }
+
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiresAt = undefined;
+    await user.save();
+
+    return res.status(200).json({ message: 'Password reset successful.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Failed to reset password.', error: error.message });
+  }
+};
+
 const getUsers = async (_req, res) => {
   try {
     const users = await User.find().sort({ createdAt: -1 });
@@ -101,5 +190,7 @@ const getUsers = async (_req, res) => {
 module.exports = {
   register,
   login,
+  forgotPassword,
+  resetPassword,
   getUsers
 };
