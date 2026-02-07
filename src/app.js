@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const templateRoutes = require('./routes/templateRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const authRoutes = require('./routes/authRoutes');
+const logRoutes = require('./routes/logRoutes');
 const cors = require('cors');
 
 dotenv.config();
@@ -25,6 +26,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/emails', emailRoutes);
+app.use('/api/logs', logRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: `Route not found: ${req.originalUrl}` });

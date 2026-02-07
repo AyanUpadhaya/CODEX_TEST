@@ -1,8 +1,17 @@
 const EmailTemplate = require('../models/EmailTemplate');
+const { createLogSafe } = require('../services/logService');
 
 const createTemplate = async (req, res) => {
   try {
     const template = await EmailTemplate.create(req.body);
+
+    await createLogSafe({
+      type: 'template_created',
+      message: `Template created: ${template.name}`,
+      actor: req.user,
+      metadata: { templateId: template._id, templateName: template.name }
+    });
+
     return res.status(201).json({ message: 'Template created successfully', data: template });
   } catch (error) {
     return res.status(400).json({ message: 'Failed to create template', error: error.message });
