@@ -6,13 +6,16 @@ const {
   updateTemplate,
   deleteTemplate
 } = require('../controllers/templateController');
+const authenticateToken = require('../middleware/authMiddleware');
+const authorizeRoles = require('../middleware/roleMiddleware');
 
 const router = express.Router();
 
-router.post('/', createTemplate);
 router.get('/', getTemplates);
 router.get('/:id', getTemplateById);
-router.put('/:id', updateTemplate);
-router.delete('/:id', deleteTemplate);
+router.post('/', authenticateToken, authorizeRoles('admin', 'manager'), createTemplate);
+router.put('/:id', authenticateToken, authorizeRoles('admin', 'manager'), updateTemplate);
+router.patch('/:id', authenticateToken, authorizeRoles('admin', 'manager'), updateTemplate);
+router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), deleteTemplate);
 
 module.exports = router;
