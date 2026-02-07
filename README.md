@@ -3,6 +3,7 @@
 Express.js API for:
 - storing/retrieving email templates (CRUD)
 - sending single and bulk emails with Nodemailer
+- user management with JWT authentication and role-based authorization
 - MongoDB + Mongoose persistence
 
 ## Setup
@@ -20,28 +21,64 @@ Express.js API for:
    npm run dev
    ```
 
-## Seed sample templates
+## Seed data
 
+Seed sample templates:
 ```bash
 npm run seed
 ```
 
+Seed one default user:
+```bash
+npm run seed:users
+```
+
 ## API endpoints
 
+### Auth
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/users` (admin/manager only)
+
 ### Templates CRUD
-- `POST /api/templates`
+- `POST /api/templates` (admin/manager)
 - `GET /api/templates`
 - `GET /api/templates/:id`
-- `PUT /api/templates/:id`
-- `DELETE /api/templates/:id`
+- `PUT /api/templates/:id` (admin/manager)
+- `PATCH /api/templates/:id` (admin/manager)
+- `DELETE /api/templates/:id` (admin/manager)
 
 ### Emails
-- `POST /api/emails/send`
-- `POST /api/emails/send-bulk`
+- `POST /api/emails/send` (admin/manager/staff)
+- `POST /api/emails/send-bulk` (admin/manager/staff)
 
-### API key auth
-- All mutation routes (`POST`, `PUT`, `PATCH`, `DELETE`) require the `x-api-key` header.
-- Set the API key in `.env` as `API_KEY`.
+### JWT auth + RBAC
+- Mutation routes (`POST`, `PUT`, `PATCH`, `DELETE`) are protected by Bearer token authentication middleware.
+- Role middleware checks the role inside JWT payload and allows access only for configured roles.
+- Set `JWT_SECRET` and optionally `JWT_EXPIRES_IN` in `.env`.
+
+Use this header for protected routes:
+```http
+Authorization: Bearer <jwt-token>
+```
+
+### Register payload example
+```json
+{
+  "name": "Alex Admin",
+  "email": "alex@example.com",
+  "password": "securepass123",
+  "role": "admin"
+}
+```
+
+### Login payload example
+```json
+{
+  "email": "alex@example.com",
+  "password": "securepass123"
+}
+```
 
 ### Single send payload examples
 

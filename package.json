@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "seed": "node seed/seedTemplates.js"
+    "seed": "node seed/seedTemplates.js",
+    "seed:users": "node seed/seedUsers.js"
   },
   "keywords": [
     "express",
