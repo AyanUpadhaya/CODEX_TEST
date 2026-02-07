@@ -4,6 +4,7 @@ Express.js API for:
 - storing/retrieving email templates (CRUD)
 - sending single and bulk emails with Nodemailer
 - user management with JWT authentication and role-based authorization
+- activity logging for key system events (signups, logins, template creation, single and bulk sends)
 - MongoDB + Mongoose persistence
 
 ## Setup
@@ -53,6 +54,19 @@ npm run seed:users
 ### Emails
 - `POST /api/emails/send` (admin/manager/staff)
 - `POST /api/emails/send-bulk` (admin/manager/staff)
+
+
+### Logs
+- `GET /api/logs` (admin/manager)
+- `GET /api/logs/:id` (admin/manager)
+- `DELETE /api/logs` (admin only, clears all logs)
+
+Log entries are stored automatically for:
+- user signup
+- user login
+- template creation
+- single email send
+- bulk email send
 
 ### JWT auth + RBAC
 - Mutation routes (`POST`, `PUT`, `PATCH`, `DELETE`) are protected by Bearer token authentication middleware.

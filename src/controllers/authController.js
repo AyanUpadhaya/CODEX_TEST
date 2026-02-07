@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { User, ROLES } = require('../models/User');
 const { signToken } = require('../utils/jwt');
 const { sendEmail } = require('../services/emailService');
+const { createLogSafe } = require('../services/logService');
 
 const RESET_PASSWORD_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
@@ -55,6 +56,13 @@ const register = async (req, res) => {
     const user = await User.create({ name, email, password, role });
     const token = buildToken(user);
 
+    await createLogSafe({
+      type: 'user_signed_up',
+      message: `User signed up: ${user.email}`,
+      actor: { id: user._id, name: user.name, email: user.email, role: user.role },
+      metadata: { userId: user._id, role: user.role }
+    });
+
     return res.status(201).json({
       message: 'User registered successfully.',
       data: {
@@ -87,6 +95,13 @@ const login = async (req, res) => {
     }
 
     const token = buildToken(user);
+
+    await createLogSafe({
+      type: 'user_logged_in',
+      message: `User logged in: ${user.email}`,
+      actor: { id: user._id, name: user.name, email: user.email, role: user.role },
+      metadata: { userId: user._id }
+    });
 
     return res.status(200).json({
       message: 'Login successful.',

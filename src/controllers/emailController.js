@@ -1,5 +1,6 @@
 const EmailTemplate = require('../models/EmailTemplate');
 const { renderTemplateVariables, sendEmail } = require('../services/emailService');
+const { createLogSafe } = require('../services/logService');
 
 const sendSingleEmail = async (req, res) => {
   try {
@@ -26,6 +27,14 @@ const sendSingleEmail = async (req, res) => {
     }
 
     const info = await sendEmail({ to, subject: finalSubject, html: finalHtml });
+
+    await createLogSafe({
+      type: 'email_sent',
+      message: `Email sent to ${to}`,
+      actor: req.user,
+      metadata: { to, subject: finalSubject, templateId: templateId || null, messageId: info.messageId }
+    });
+
     return res.status(200).json({ message: 'Email sent successfully', messageId: info.messageId });
   } catch (error) {
     return res.status(500).json({ message: 'Failed to send email', error: error.message });
@@ -76,13 +85,22 @@ const sendBulkEmails = async (req, res) => {
       }
     }
 
+    const summary = {
+      total: results.length,
+      sent: results.filter((item) => item.status === 'sent').length,
+      failed: results.filter((item) => item.status === 'failed').length
+    };
+
+    await createLogSafe({
+      type: 'bulk_emails_sent',
+      message: `Bulk email sent to ${summary.sent}/${summary.total} recipients`,
+      actor: req.user,
+      metadata: { templateId: templateId || null, subject: finalSubject, summary }
+    });
+
     return res.status(200).json({
       message: 'Bulk email process completed',
-      summary: {
-        total: results.length,
-        sent: results.filter((item) => item.status === 'sent').length,
-        failed: results.filter((item) => item.status === 'failed').length
-      },
+      summary,
       results
     });
   } catch (error) {
