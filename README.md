@@ -38,6 +38,8 @@ npm run seed:users
 ### Auth
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/reset-password/:token`
 - `GET /api/auth/users` (admin/manager only)
 
 ### Templates CRUD
