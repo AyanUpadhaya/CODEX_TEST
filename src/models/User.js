@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpiresAt: {
       type: Date,
       select: false
+    },
+    isActive:{
+      type:Boolean,
+      default:true
     }
   },
   {
@@ -82,6 +86,7 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
     name: this.name,
     email: this.email,
     role: this.role,
+    isActive:this.isActive,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

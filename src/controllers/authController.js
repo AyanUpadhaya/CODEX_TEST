@@ -1,17 +1,17 @@
-const crypto = require('crypto');
-const { User, ROLES } = require('../models/User');
-const { signToken } = require('../utils/jwt');
-const { sendEmail } = require('../services/emailService');
-const { createLogSafe } = require('../services/logService');
+const crypto = require("crypto");
+const { User, ROLES } = require("../models/User");
+const { signToken } = require("../utils/jwt");
+const { sendEmail } = require("../services/emailService");
+const { createLogSafe } = require("../services/logService");
 
 const RESET_PASSWORD_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 const buildToken = (user) => {
   const secret = process.env.JWT_SECRET;
-  const expiresIn = process.env.JWT_EXPIRES_IN || '1d';
+  const expiresIn = process.env.JWT_EXPIRES_IN || "1d";
 
   if (!secret) {
-    throw new Error('JWT_SECRET is not configured.');
+    throw new Error("JWT_SECRET is not configured.");
   }
 
   return signToken(
@@ -19,59 +19,74 @@ const buildToken = (user) => {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
-      name: user.name
+      name: user.name,
+      isActive: user.isActive,
     },
     secret,
-    { expiresIn }
+    { expiresIn },
   );
 };
 
 const buildResetPasswordUrl = (req, token) => {
-  const configuredBaseUrl = process.env.RESET_PASSWORD_URL_BASE || process.env.CLIENT_URL;
+  const configuredBaseUrl =
+    process.env.RESET_PASSWORD_URL_BASE || process.env.CLIENT_URL;
 
   if (configuredBaseUrl) {
-    return `${configuredBaseUrl.replace(/\/$/, '')}/reset-password/${token}`;
+    return `${configuredBaseUrl.replace(/\/$/, "")}/reset-password/${token}`;
   }
 
-  return `${req.protocol}://${req.get('host')}/api/auth/reset-password/${token}`;
+  return `${req.protocol}://${req.get("host")}/api/auth/reset-password/${token}`;
 };
 
 const register = async (req, res) => {
   try {
-    const { name, email, password, role = 'staff' } = req.body;
+    const { name, email, password, role = "staff" } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'name, email and password are required.' });
+      return res
+        .status(400)
+        .json({ message: "name, email and password are required." });
     }
 
     if (!ROLES.includes(role)) {
-      return res.status(400).json({ message: `role must be one of: ${ROLES.join(', ')}` });
+      return res
+        .status(400)
+        .json({ message: `role must be one of: ${ROLES.join(", ")}` });
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(409).json({ message: 'A user with this email already exists.' });
+      return res
+        .status(409)
+        .json({ message: "A user with this email already exists." });
     }
 
     const user = await User.create({ name, email, password, role });
     const token = buildToken(user);
 
     await createLogSafe({
-      type: 'user_signed_up',
+      type: "user_signed_up",
       message: `User signed up: ${user.email}`,
-      actor: { id: user._id, name: user.name, email: user.email, role: user.role },
-      metadata: { userId: user._id, role: user.role }
+      actor: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      metadata: { userId: user._id, role: user.role },
     });
 
     return res.status(201).json({
-      message: 'User registered successfully.',
+      message: "User registered successfully.",
       data: {
         user: user.toSafeJSON(),
-        token
-      }
+        token,
+      },
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to register user.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to register user.", error: error.message });
   }
 };
 
@@ -80,38 +95,49 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: 'email and password are required.' });
+      return res
+        .status(400)
+        .json({ message: "email and password are required." });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+password",
+    );
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
+      return res.status(401).json({ message: "Invalid email or password." });
     }
 
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid email or password.' });
+      return res.status(401).json({ message: "Invalid email or password." });
     }
 
     const token = buildToken(user);
 
     await createLogSafe({
-      type: 'user_logged_in',
+      type: "user_logged_in",
       message: `User logged in: ${user.email}`,
-      actor: { id: user._id, name: user.name, email: user.email, role: user.role },
-      metadata: { userId: user._id }
+      actor: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      metadata: { userId: user._id },
     });
 
     return res.status(200).json({
-      message: 'Login successful.',
+      message: "Login successful.",
       data: {
         user: user.toSafeJSON(),
-        token
-      }
+        token,
+      },
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to login user.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to login user.", error: error.message });
   }
 };
 
@@ -120,42 +146,52 @@ const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ message: 'email is required.' });
+      return res.status(400).json({ message: "email is required." });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+resetPasswordToken +resetPasswordExpiresAt');
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      "+resetPasswordToken +resetPasswordExpiresAt",
+    );
 
     if (!user) {
       return res.status(200).json({
-        message: 'If the email exists, a reset link has been sent.'
+        message: "If the email exists, a reset link has been sent.",
       });
     }
 
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(rawToken)
+      .digest("hex");
 
     user.resetPasswordToken = hashedToken;
-    user.resetPasswordExpiresAt = new Date(Date.now() + RESET_PASSWORD_EXPIRY_MS);
+    user.resetPasswordExpiresAt = new Date(
+      Date.now() + RESET_PASSWORD_EXPIRY_MS,
+    );
     await user.save();
 
     const resetPasswordUrl = buildResetPasswordUrl(req, rawToken);
 
     await sendEmail({
       to: user.email,
-      subject: 'Reset your password',
+      subject: "Reset your password",
       html: `
         <p>Hello ${user.name},</p>
         <p>You requested a password reset. Click the link below to reset your password:</p>
         <p><a href="${resetPasswordUrl}">${resetPasswordUrl}</a></p>
         <p>This link expires in 24 hours.</p>
-      `
+      `,
     });
 
     return res.status(200).json({
-      message: 'If the email exists, a reset link has been sent.'
+      message: "If the email exists, a reset link has been sent.",
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to process forgot password request.', error: error.message });
+    return res.status(500).json({
+      message: "Failed to process forgot password request.",
+      error: error.message,
+    });
   }
 };
 
@@ -165,18 +201,22 @@ const resetPassword = async (req, res) => {
     const { password } = req.body;
 
     if (!token || !password) {
-      return res.status(400).json({ message: 'token and password are required.' });
+      return res
+        .status(400)
+        .json({ message: "token and password are required." });
     }
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
-      resetPasswordExpiresAt: { $gt: new Date() }
-    }).select('+resetPasswordToken +resetPasswordExpiresAt');
+      resetPasswordExpiresAt: { $gt: new Date() },
+    }).select("+resetPasswordToken +resetPasswordExpiresAt");
 
     if (!user) {
-      return res.status(400).json({ message: 'Reset token is invalid or has expired.' });
+      return res
+        .status(400)
+        .json({ message: "Reset token is invalid or has expired." });
     }
 
     user.password = password;
@@ -184,9 +224,11 @@ const resetPassword = async (req, res) => {
     user.resetPasswordExpiresAt = undefined;
     await user.save();
 
-    return res.status(200).json({ message: 'Password reset successful.' });
+    return res.status(200).json({ message: "Password reset successful." });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to reset password.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to reset password.", error: error.message });
   }
 };
 
@@ -195,10 +237,48 @@ const getUsers = async (_req, res) => {
     const users = await User.find().sort({ createdAt: -1 });
 
     return res.status(200).json({
-      data: users.map((user) => user.toSafeJSON())
+      data: users.map((user) => user.toSafeJSON()),
     });
   } catch (error) {
-    return res.status(500).json({ message: 'Failed to fetch users.', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch users.", error: error.message });
+  }
+};
+
+const updateUser = async (req, res) => {
+  const { id } = req.params;
+  const data = req.body;
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      data,
+      { new: true, runValidators: true }, // Options: return the *new* doc and run schema validators
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    await createLogSafe({
+      type: "user_info_updated",
+      message: `User info updated: ${updatedUser.email}`,
+      actor: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+      },
+      metadata: { userId: updatedUser._id, role: updatedUser.role },
+    });
+
+
+    return res.status(200).json({ message: "user updated successfully", data:updatedUser });;
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Failed to update user.", error: error.message });
   }
 };
 
@@ -207,5 +287,6 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
-  getUsers
+  getUsers,
+  updateUser
 };

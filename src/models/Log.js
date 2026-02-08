@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const LOG_TYPES = [
   'user_signed_up',
   'user_logged_in',
+  'user_info_updated',
   'template_created',
   'email_sent',
   'bulk_emails_sent'
